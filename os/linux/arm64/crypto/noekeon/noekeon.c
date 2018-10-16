@@ -35,7 +35,7 @@ void noekeon(void*mk,void*p){
 
   a=*x;b=x[1];c=x[2];d=x[3];
 
-  for(;;){
+  for(;;) {
     a^=rc;t=a^c;t^=R(t,8)^R(t,24);
     b^=t;d^=t;a^=k[0];b^=k[1];
     c^=k[2];d^=k[3];t=b^d;

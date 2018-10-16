@@ -30,7 +30,7 @@
 ; -----------------------------------------------
 ; ChaCha20 stream cipher in x86 assembly
 ;
-; size: 191 bytes
+; size: 184 bytes
 ;
 ; global calls use cdecl convention
 ;
@@ -116,19 +116,19 @@ P:
     push   64
     pop    ecx
     rep    movsb
+    pop    edi
+    push   edi
     ; i = 0
     xor    eax, eax
 L4:
-    pop    edi
-    push   edi
     push   eax
     call   L5
     dw     040c8H, 051d9H, 062eaH, 073fbH
     dw     050faH, 061cbH, 072d8H, 043e9H
 L5:
     pop    esi
-    and    al, 15
-    add    esi, eax
+    and    al, 7 
+    lea    esi, [esi+eax*2]
     
     lodsb
     aam    16
@@ -140,35 +140,30 @@ L5:
     movzx  ebx, ah
     movzx  eax, al
     
-    lea    eax, [edi+eax*4]
-    lea    ebx, [edi+ebx*4]
-    lea    edx, [edi+edx*4]
-    lea    edi, [edi+ebp*4]
-
     ; for (r=0x7080C10;r;r>>=8)
-    mov    ecx, 07080C10h ; load rotation values
+    mov    ecx, 0x7080C10 ; load rotation values
 L6:
     ; x[a] += x[b]
-    mov    ebp, [ebx]
-    add    [eax], ebp
+    mov    esi, [edi+ebx*4]
+    add    [edi+eax*4], esi
     
     ; x[d] = R(x[d] ^ x[a], (r & 255))
-    mov    ebp, [edi]    
-    xor    ebp, [eax]
-    rol    ebp, cl
-    mov    [edi], ebp
+    mov    esi, [edi+ebp*4]    
+    xor    esi, [edi+eax*4]
+    rol    esi, cl
+    mov    [edi+ebp*4], esi
     
     ; X(a, c); X(b, d);
     xchg   eax, edx
-    xchg   ebx, edi 
+    xchg   ebx, ebp 
     
     ; r >>= 8
     shr    ecx, 8       ; shift until done 
     jnz    L6
     
     pop    eax
-    add    al, 2
-    cmp    al, 80*2
+    inc    eax
+    cmp    al, 80
     jnz    L4
     
     popad
