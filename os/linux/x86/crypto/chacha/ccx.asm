@@ -30,7 +30,7 @@
 ; -----------------------------------------------
 ; ChaCha20 stream cipher in x86 assembly
 ;
-; size: 184 bytes
+; size: 180 bytes
 ;
 ; global calls use cdecl convention
 ;
@@ -65,31 +65,9 @@ _chacha:
     lodsd
     xchg   ebx, eax          ; ebx = input or key+nonce
     lodsd
-    jecxz  L3    
-    xchg   esi, eax          ; esi = state
-    ; perform encryption/decryption
-    pushad
-    pushad
-    mov    edi, esp          ; edi = c
-L0:
-    xor    eax, eax
-    jecxz  L2                ; exit if len==0
-    call   P
-L1:
-    mov    dl, [edi+eax]
-    xor    [ebx], dl
-    inc    ebx
-    inc    eax
-    cmp    al, 64
-    loopne L1
-    jmp    L0
-L2:
-    popad
-    popad   
-    popad
-    ret
-    ; ----------------------------------
-L3:
+    test   ecx, ecx
+    jnz    L0   
+
     xchg   eax, edi
     lea    esi, [ebx+32] 
     ; copy "expand 32-byte k" into state
@@ -105,11 +83,19 @@ L3:
     mov    cl, 32+4+12
     rep    movsb
     popad
-    ret    
-
+    ret 
+L0:    
+    xchg   esi, eax          ; esi = state
+    ; perform encryption/decryption
+    pushad
+    pushad
+    mov    edi, esp          ; edi = c
+L1:
+    xor    eax, eax
+    jecxz  L7                ; exit if len==0
+    ; permute
     ; esi = state
     ; edi = out
-P:
     pushad
     pushad
     ; memcpy(x, s, 64)
@@ -120,12 +106,12 @@ P:
     push   edi
     ; i = 0
     xor    eax, eax
-L4:
+L2:
     push   eax
-    call   L5
+    call   L3
     dw     040c8H, 051d9H, 062eaH, 073fbH
     dw     050faH, 061cbH, 072d8H, 043e9H
-L5:
+L3:
     pop    esi
     and    al, 7 
     lea    esi, [esi+eax*2]
@@ -142,7 +128,7 @@ L5:
     
     ; for (r=0x7080C10;r;r>>=8)
     mov    ecx, 0x7080C10 ; load rotation values
-L6:
+L4:
     ; x[a] += x[b]
     mov    esi, [edi+ebx*4]
     add    [edi+eax*4], esi
@@ -159,25 +145,37 @@ L6:
     
     ; r >>= 8
     shr    ecx, 8       ; shift until done 
-    jnz    L6
+    jnz    L4
     
     pop    eax
     inc    eax
     cmp    al, 80
-    jnz    L4
+    jnz    L2
     
     popad
     
     ; F(16) x[i] += s[i];
     mov    cl, 16
-L7:
+L5:
     lodsd
     add    [edi], eax
     scasd
-    loop   L7
+    loop   L5
 
     ; s[12]++;
     inc    dword[esi-4*4]
+    popad
+L6:
+    mov    dl, [edi+eax]
+    xor    [ebx], dl
+    inc    ebx
+    inc    eax
+    cmp    al, 64
+    loopne L6
+    jmp    L1
+L7:
+    popad
+    popad   
     popad
     ret
     
