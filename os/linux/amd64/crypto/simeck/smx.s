@@ -28,9 +28,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # -----------------------------------------------
-# SIMECK 64/128 Block Cipher in x86 assembly
+# SIMECK 64/128 Block Cipher in AMD64 assembly
 #
-# size: 97 bytes
+# size: 90 bytes
 #
 # global calls use cdecl convention
 #
@@ -40,11 +40,16 @@
       .global _simeck
 simeck:
 _simeck:
-    pusha
-    mov    edi, 0xBCA3083F
-    mov    esi, 0x938
-    pusha
-    mov    esi, [esp+64+4] # esi=mk
+    push   rbp
+    push   rbx
+    mov    r8, 0x938BCA3083F
+    # rdi = p
+    push   rsi
+    pop    r9
+    # rsi = mk
+    push   rsi
+    push   rdi
+    pop    rsi 
     lodsd
     xchg   eax, ecx
     lodsd
@@ -53,11 +58,8 @@ _simeck:
     xchg   eax, edi
     lodsd
     xchg   eax, ebp
-    mov    esi, [esp+64+8] # esi=x
-    push   esi
-    lodsd
-    xchg   eax, ebx
-    lodsd
+    mov    ebx, [r9]
+    mov    eax, [r9+4]
 L0:
     xor    ebx, ecx  # x[0]^=k[0]#
     mov    esi, eax  # x[0]^=R(x[1],1)#
@@ -78,23 +80,21 @@ L0:
 
     # esi = (s & 1) - 4
     xor    esi, esi
-    shr    dword ptr[esp+8], 1
-    rcr    dword ptr[esp+4], 1
+    shr    r8, 1
+    jz     L1
     adc    esi, -4
     xor    ecx, esi
     
     xchg   ecx, edx  # X(k[0],k[1])
     xchg   edx, edi  # X(k[1],k[2])
     xchg   edi, ebp  # X(x[0],k[0])
-
-    cmp    dword ptr[esp+4], 0
-    jnz    L0
-
-    pop    edi
+    jmp    L0
+L1:
+    pop    rdi
     xchg   eax, ebx
     stosd            # x[0]=ebx
     xchg   eax, ebx
     stosd            # x[1]=eax
-    popa
-    popa
+    pop    rbx
+    pop    rbp
     ret

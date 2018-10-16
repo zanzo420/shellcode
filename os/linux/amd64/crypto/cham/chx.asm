@@ -78,11 +78,12 @@ L0:
     xor    edx, 1
     mov    [edi+edx*4], ebx ; rk[(i + KW) ^ 1] = ebx
     
-    inc    eax
+    inc    al 
     cmp    al, KW
     jnz    L0
-    
-    mov    esi, [esp+64+8] ; esi = data
+   
+    push   r8
+    pop    rsi 
     lodsd
     xchg   eax, ebx        ; ebx = x[0]
     lodsd
@@ -99,7 +100,7 @@ L1:
     jnz    L2
     xchg   cl, ch
 L2:
-    push   esi             ; t = x[3]
+    push   rsi             ; t = x[3]
     xor    ebx, eax        ; x[0]^= i
     mov    esi, eax        ; x[3] = rk[i & 7]
     and    esi, 7
@@ -116,9 +117,9 @@ L2:
     ; x[0] = x[1], x[1] = x[2], x[2] = t
     mov    ebx, edx
     mov    edx, ebp
-    pop    ebp
+    pop    rbp
     ; i++
-    inc    eax
+    inc    al 
     ; i < R
     cmp    al, R
     jnz    L1

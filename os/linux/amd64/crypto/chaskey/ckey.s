@@ -29,9 +29,9 @@
 */
 
 /**
-  Chaskey-LTS Block Cipher in x86 assembly (Encryption only)
+  Chaskey-LTS Block Cipher in AMD64 assembly (Encryption only)
 
-  size: 89 bytes
+  size: 83 bytes
 
   global calls use cdecl convention
 
@@ -42,10 +42,10 @@
 
 chaskey:
 _chaskey:
-    pushad
-    mov     edi, [esp+32+4] # edi = key
-    mov     esi, [esp+32+8] # esi = data
-    push    esi
+    push    rbx
+    push    rbp
+
+    push    rsi
     # load plaintext
     lodsd
     xchg    eax, ebp
@@ -56,12 +56,12 @@ _chaskey:
     lodsd
     xchg    eax, ebp
     # pre-whiten
-    xor     eax, [edi ]
-    xor     ebx, [edi+ 4]
-    xor     edx, [edi+ 8]
-    xor     ebp, [edi+12]
+    xor     eax, [rdi ]
+    xor     ebx, [rdi+ 4]
+    xor     edx, [rdi+ 8]
+    xor     ebp, [rdi+12]
     push    16
-    pop     ecx
+    pop     rcx
 L0:
     # x[0] += x[1]#
     add     eax, ebx
@@ -88,11 +88,11 @@ L0:
     ror     edx, 16
     loop    L0
     # post-whiten
-    xor     eax, [edi ]
-    xor     ebx, [edi+ 4]
-    xor     edx, [edi+ 8]
-    xor     ebp, [edi+12]
-    pop     edi
+    xor     eax, [rdi ]
+    xor     ebx, [rdi+ 4]
+    xor     edx, [rdi+ 8]
+    xor     ebp, [rdi+12]
+    pop     rdi
     # save ciphertext
     stosd
     xchg    eax, ebx
@@ -101,5 +101,6 @@ L0:
     stosd
     xchg    eax, ebp
     stosd
-    popa
+    pop     rbp
+    pop     rbx
     ret

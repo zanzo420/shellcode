@@ -62,7 +62,7 @@ int main(void)
     memcpy(buf, &xtea_test_pt[i][0], 8);
     memcpy(key, &xtea_test_key[i][0], 16);
 
-    xtea(key, buf);
+    xtea(key,buf);
     
     bin2hex("c:", buf, 8);
     

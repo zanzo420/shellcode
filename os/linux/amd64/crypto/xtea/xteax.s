@@ -30,7 +30,7 @@
 #
 # XTEA-64/128 Block Cipher in x86 assembly (Encryption only)
 #
-# size: 72 bytes
+# size: 66 bytes
 #
 # global calls use cdecl convention
 #
@@ -40,13 +40,13 @@
     .global _xtea
 xtea:
 _xtea:
-    pusha
-    mov edi, [esp+32+4] # edi = key
-    mov esi, [esp+32+8] # esi = data
+    push rbx
+    push rbp
+
     push 64
-    pop ecx
+    pop rcx
     xor edx, edx # edx = 0
-    push esi
+    push rsi           # save buf
     lodsd
     xchg eax, ebx
     lodsd
@@ -70,7 +70,7 @@ L0:
     shr esi, 11 # esi = edx >> 11
 L1:
     and esi, 3 # esi &= 3
-    mov esi, [edi+4*esi] # esi = edx + edi[esi]
+    mov esi, [rdi+4*rsi] # esi = edx + edi[esi]
     add esi, edx
 
     xor ebp, esi # ebp ^= esi
@@ -79,9 +79,10 @@ L1:
     xchg eax, ebx # XCHG(eax, ebx);
     loop L0
 
-    pop edi # edi = x
+    pop rdi # edi = x
     stosd   # x[0] = eax
     xchg eax, ebx
     stosd   # x[1] = ebx
-    popa
+    pop  rbp
+    pop  rbx
     ret

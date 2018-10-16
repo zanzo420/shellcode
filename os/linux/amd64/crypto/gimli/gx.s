@@ -42,13 +42,14 @@
 
 gimli:
 _gimli:
-    pusha
+    push   rbx
+    push   rbp
     mov    ecx, 0x9e377900 + 24
 L0:
-    mov    esi, [esp+32+4]
-    push   esi
+    push   rdi
+    pop    rsi
     push   4
-    pop    ebx
+    pop    rbx
 L1:
     # eax = ROTR32(esi[ ebx], 8)
     lodsd

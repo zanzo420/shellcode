@@ -94,6 +94,7 @@ L0:
     xor    eax, eax
     ; t = x[3], x[0] ^= i, x[3] = rk[i & 7]
 L1: 
+int3
     mov    cx, 0x1F18      ; rotation values
     test   al, 1
     jnz    L2

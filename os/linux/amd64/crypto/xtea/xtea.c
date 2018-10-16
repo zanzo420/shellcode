@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
-void xtea(void*mk,void*p){
+void xtea(void*mk,void*p) {
   unsigned int t,r=65,s=0,*k=mk,*x=p;
 
   while(--r)

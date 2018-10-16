@@ -30,7 +30,7 @@
 #
 # SPECK-64/128 Block Cipher in x86 assembly (Encryption only)
 #
-# size: 64 bytes
+# size: 61 bytes
 #
 # global calls use cdecl convention
 #
@@ -39,16 +39,17 @@
     .global _speck
 speck:
 _speck:
-    pusha
-    mov    esi, [esp+32+8] ; esi = in
-    push   esi # save
+    push   rbx
+    push   rbp
+    push   rsi # save
 
     lodsd
     xchg   eax, ebx # ebx = in[0]
     lodsd
     xchg   eax, edx # edx = in[1]
 
-    mov    esi, [esp+32+8] # esi = key
+    push   rdi
+    pop    rsi
     lodsd
     xchg   eax, edi # edi = key[0]
     lodsd
@@ -76,14 +77,15 @@ L0:
     xchg   esi, ecx
     xchg   esi, ebp
     # i++
-    inc    eax
+    inc    al 
     cmp    al, 27
     jnz    L0
 
-    pop    edi
+    pop    rdi
     xchg   eax, ebx
     stosd
     xchg   eax, edx
     stosd
-    popa
+    pop    rbp
+    pop    rbx
     ret
