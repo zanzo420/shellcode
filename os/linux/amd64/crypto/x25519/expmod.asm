@@ -30,7 +30,7 @@
 ; -----------------------------------------------
 ; Exponentiation of 256-bit integer by 2^255-21 modulo 2^256-38
 ;
-; size: 68 bytes
+; size: 67 bytes
 ;
 ; -----------------------------------------------  
 
@@ -87,7 +87,7 @@ em_l0:
                 push   rdx             ; save x
                 call   mulmod          ; mulmod(t, t, x);
 em_l1:                
-                dec    rax             ; --i
+                dec    eax             ; --i
                 jns    em_l0           ; i>=0
                 
                 ; memcpy (x, t, 32);
