@@ -33,6 +33,11 @@ typedef unsigned int u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
 
+typedef union _w256_t {
+	u8  b[32];
+	u64 q[4];
+} w256_t;
+
 typedef u64 gf[4];
 
 void bin2hex(const char *s, uint8_t x[], int len);
@@ -71,7 +76,7 @@ void scalarmult(void *r, void *k_in, void *m) {
       // main loop
       memcpy(x, m, 32);
 
-      x[31] &= 127;
+      ((u8*)x)[31] &= 127;
 
       memcpy(b, x, 32);
 
@@ -277,7 +282,7 @@ void test_ecdh(void) {
     u8  sk1[32], pk1[32], k1[32]; // keys for Doris
     u8  sk2[32], pk2[32], k2[32]; // keys for Boris
     u8  base[32] = {9};
-    int equ, i;
+    int equ;
 
     // Doris generates private key
     random(sk1, 32);
