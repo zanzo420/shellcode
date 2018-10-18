@@ -30,7 +30,7 @@
 ; -----------------------------------------------
 ; Ascon permutation function in AMD64 assembly
 ;
-; size: 251 bytes
+; size: 250 bytes
 ;
 ; Linux/AMD64 calling convention
 ;
@@ -78,10 +78,8 @@ permute_loop:
     ; addition of round constant
     ; **************************    
     ; x2 ^= ((0xfull - i) << 4) | i;
-    push  15
-    pop   rax
-    sub   rax, [rsp]
-    shl   rax, 4
+    imul  rax, rax, -16
+    add   rax, 240
     or    rax, [rsp]
     xor   x2, rax    
     ; **********************
