@@ -1,5 +1,5 @@
 test:
-		nasm -felf64 asx.asm -oasx.o	
+		as asx.s -oasx.o	
 		gcc test.c asx.o -otest
 
 clean:
