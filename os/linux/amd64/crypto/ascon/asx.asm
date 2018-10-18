@@ -78,6 +78,7 @@ permute_loop:
     ; addition of round constant
     ; **************************    
     ; x2 ^= ((0xfull - i) << 4) | i;
+    
     imul  rax, rax, -16
     add   rax, 240
     or    rax, [rsp]
