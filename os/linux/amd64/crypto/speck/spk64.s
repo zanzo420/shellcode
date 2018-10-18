@@ -32,13 +32,12 @@
 #
 # size: 61 bytes
 #
-# global calls use cdecl convention
 #
     .intel_syntax noprefix
-    .global speck
-    .global _speck
-speck:
-_speck:
+    .global speck64
+    .global _speck64
+speck64:
+_speck64:
     push   rbx
     push   rbp
     push   rsi # save

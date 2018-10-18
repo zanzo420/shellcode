@@ -27,20 +27,20 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
-#define R(v,n)(((v)>>(n))|((v)<<(32-(n))))
+#define R(v,n)(((v)>>(n))|((v)<<(64-(n))))
 #define F(n)for(i=0;i<n;i++)
-typedef unsigned int W;
+typedef unsigned long long W;
 
-void speck(void*mk,void*p){
+void speck128(void*mk,void*p){
   W k[4],*x=p,i,t;
-  
+
   F(4)k[i]=((W*)mk)[i];
   
-  F(27)
-    *x=(R(*x,8)+x[1])^*k,
-    x[1]=R(x[1],29)^*x,
+  F(34)
+    x[1]=(R(x[1],8)+*x)^*k,
+    *x=R(*x,61)^x[1],
     t=k[3],
     k[3]=(R(k[1],8)+*k)^i,
-    *k=R(*k,29)^k[3],
+    *k=R(*k,61)^k[3],
     k[1]=k[2],k[2]=t;
 }

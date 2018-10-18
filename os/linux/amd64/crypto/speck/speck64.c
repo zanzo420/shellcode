@@ -26,22 +26,22 @@
   STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
+
+#define R(v,n)(((v)>>(n))|((v)<<(32-(n))))
+#define F(n)for(i=0;i<n;i++)
+typedef unsigned int W;
+
+// SPECK-64/128
+void speck64(void*mk,void*p){
+  W k[4],*x=p,i,t;
   
-#ifndef SPECK_H
-#define SPECK_H
-
-#include "../include/macros.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-  void speck64(void*, void*);
-  void speck128(void*, void*);
-    
-#ifdef __cplusplus
+  F(4)k[i]=((W*)mk)[i];
+  
+  F(27)
+    *x=(R(*x,8)+x[1])^*k,
+    x[1]=R(x[1],29)^*x,
+    t=k[3],
+    k[3]=(R(k[1],8)+*k)^i,
+    *k=R(*k,29)^k[3],
+    k[1]=k[2],k[2]=t;
 }
-#endif
-
-#endif
-
