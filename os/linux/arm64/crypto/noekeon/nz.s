@@ -27,6 +27,9 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
+# NOEKEON in ARM64 assembly
+# 212 bytes
+
     .arch armv8-a
     .text
 
@@ -34,6 +37,7 @@
 
 noekeon:
     mov    x12, x1
+
     # load 128-bit key
     ldp    w4, w5, [x0]
     ldp    w6, w7, [x0, 8]
@@ -49,9 +53,8 @@ L0:
     # a^=rc;t=a^c;t^=R(t,8)^R(t,24);
     eor    w0, w0, w8
     eor    w10, w0, w2
-    mov    w11, w10
-    eor    w10, w10, w11, ror 8
-    eor    w10, w10, w11, ror 24
+    eor    w11, w10, w10, ror 8
+    eor    w10, w11, w10, ror 24
 
     # b^=t;d^=t;a^=k[0];b^=k[1];
     eor    w1, w1, w10
@@ -65,8 +68,8 @@ L0:
     eor    w10, w1, w3
 
     # t^=R(t,8)^R(t,24);a^=t;c^=t;
-    eor    w11, w10, w10, ror 24
-    eor    w10, w11, w10, ror 8
+    eor    w11, w10, w10, ror 8 
+    eor    w10, w11, w10, ror 24 
     eor    w0, w0, w10
     eor    w2, w2, w10
 
@@ -78,6 +81,7 @@ L0:
     lsr    w10, w8, 7
     mul    w10, w10, w9
     eor    w8, w10, w8, lsl 1
+    uxtb   w8, w8
 
     # b=R(b,31);c=R(c,27);d=R(d,30);
     ror    w1, w1, 31
@@ -86,8 +90,7 @@ L0:
     
     # b^=~(d|c);t=d;d=a^(c&b);a=t;
     orr    w10, w3, w2
-    mvn    w10, w10
-    eor    w1, w1, w10
+    eon    w1, w1, w10
     mov    w10, w3
     and    w3, w2, w1
     eor    w3, w3, w0
@@ -97,11 +100,11 @@ L0:
     eor    w2, w2, w0
     eor    w2, w2, w1
     eor    w2, w2, w3
-    
     orr    w10, w3, w2
-    mvn    w10, w10
-    eor    w1, w1, w10
-    
+    eon    w1, w1, w10
+    and    w10, w2, w1
+    eor    w0, w0, w10
+ 
     # b=R(b,1);c=R(c,5);d=R(d,2);
     ror    w1, w1, 1
     ror    w2, w2, 5
@@ -112,8 +115,3 @@ L1:
     stp    w0, w1, [x12]
     stp    w2, w3, [x12, 8]
     ret
-    
-    
-    
-    
-    
