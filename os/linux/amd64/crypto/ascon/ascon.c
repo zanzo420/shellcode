@@ -14,7 +14,7 @@ void ascon(void*p) {
       x2^=((0xFULL-i)<<4)|i;
       // apply non-linear layer
       x0^=x4;x4^=x3;x2^=x1;
-      t4=(x0&~x4);t3=(x4&~x3);t2=(x3&~x2);t1=(x2&~x1);t0=(x1&~x0);
+      t0=(x1&~x0);t1=(x2&~x1);t2=(x3&~x2);t3=(x4&~x3);t4=(x0&~x4);
       x0^=t1;x1^=t2;x2^=t3;x3^=t4;x4^=t0;
       x1^=x0;x0^=x4;x3^=x2;x2=~x2;
       // apply linear diffusion layer
