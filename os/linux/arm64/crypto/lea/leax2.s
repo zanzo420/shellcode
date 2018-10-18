@@ -27,107 +27,104 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
-	.arch armv8-a
+    .arch armv8-a
 
-	.include "../../include.inc"
+    .include "../../include.inc"
 
-	.text
-	.global lea128
+    .text
+    .global lea128
 
 lea128:
     mov    x11, x0
-	mov    x12, x1
-  # W c[4]=
-  #  {0xc3efe9db,0x88c4d604,
-  #   0xe789f229,0xc6f98763};
+    mov    x12, x1
 
     # allocate 16 bytes
-	sub    sp, sp, 4*4
-	
-	# load immediate values
+    sub    sp, sp, 4*4
+
+    # load immediate values
     movl   w0, 0xc3efe9db
     movl   w1, 0x88c4d604
     movl   w2, 0xe789f229
     movl   w3, 0xc6f98763
-	
-	# store on stack
+
+    # store on stack
     str    w0, [sp    ]
     str    w1, [sp,  4]
     str    w2, [sp,  8]
     str    w3, [sp, 12]
-	
-  # for(r=0;r<24;r++) {
+
+    # for(r=0;r<24;r++) {
     mov    w8, wzr
-	
-	# load 128-bit key
-	ldp    w4, w5, [x11]
-	ldp    w6, w7, [x11, 8]
-	
-	# load 128-bit plaintext
-	ldp    w0, w1, [x12]
-	ldp    w2, w3, [x12, 8]
+
+    # load 128-bit key
+    ldp    w4, w5, [x11]
+    ldp    w6, w7, [x11, 8]
+
+    # load 128-bit plaintext
+    ldp    w0, w1, [x12]
+    ldp    w2, w3, [x12, 8]
 L0:
     # t=c[r%4];
     and    w9, w8, 3 
-	ldr    w10, [sp, x9, lsl 2]
+    ldr    w10, [sp, x9, lsl 2]
 	
-	# c[r%4]=R(t,28);
-	mov    w11, w10, ror 28
-	str    w10, [sp, x9, lsl 2]
-	
-	# k[0]=R(k[0]+t,31);
-	add    w4, w4, w10
-	ror    w4, w4, 31
-	
-	# k[1]=R(k[1]+R(t,31),29);
-	ror    w11, w10, 31
-	add    w5, w5, w11
-	ror    w5, w5, 29
-	
-	# k[2]=R(k[2]+R(t,30),26);
-	ror    w11, w10, 30
-	add    w6, w6, w11
-	ror    w6, w6, 26
-	
-	# k[3]=R(k[3]+R(t,29),21);
-	ror    w11, w10, 29
-	add    w7, w7, w11
-	ror    w7, w7, 21
-	
-	# t=x[0];
-	mov    w10, w0
-	
-	# x[0]=R((x[0]^k[0])+(x[1]^k[1]),23);
-	eor    w0, w0, w4
-	eor    w11, w1, w5
-	add    w0, w0, w11
-	ror    w0, w0, 23
-	
-	# x[1]=R((x[1]^k[2])+(x[2]^k[1]),5);
-	eor    w1, w1, w7
-	eor    w11, w2, w6
-	add    w1, w1, w11
-	ror    w1, w1, 5
-	
-	# x[2]=R((x[2]^k[3])+(x[3]^k[1]),3);
-	eor    w2, w2, w7
-	eor    w3, w3, w5
-	add    w2, w2, w3
-	ror    w2, w2, 3
+    # c[r%4]=R(t,28);
+    mov    w11, w10, ror 28
+    str    w10, [sp, x9, lsl 2]
 
-	# x[3]=t;
-	mov    w3, w10
-	
-	# r++
-	add    w8, w8, 1
-	# r < 24
-	cmp    w8, 24
-	bne    L0
-	
-	# save 128-bit ciphertext
-	stp    w0, w1, [x12]
-	stp    w2, w3, [x12, 8]
-	
+    # k[0]=R(k[0]+t,31);
+    add    w4, w4, w10
+    ror    w4, w4, 31
+
+    # k[1]=R(k[1]+R(t,31),29);
+    ror    w11, w10, 31
+    add    w5, w5, w11
+    ror    w5, w5, 29
+
+    # k[2]=R(k[2]+R(t,30),26);
+    ror    w11, w10, 30
+    add    w6, w6, w11
+    ror    w6, w6, 26
+
+    # k[3]=R(k[3]+R(t,29),21);
+    ror    w11, w10, 29
+    add    w7, w7, w11
+    ror    w7, w7, 21
+
+    # t=x[0];
+    mov    w10, w0
+
+    # w[0]=R((w[0]^k[0])+(w[1]^k[1]),23);
+    eor    w0, w0, w4
+    eor    w9, w1, w5
+    add    w0, w0, w9
+    ror    w0, w0, 23
+
+    # w[1]=R((w[1]^k[2])+(w[2]^k[1]),5);
+    eor    w1, w1, w6
+    eor    w9, w2, w5
+    add    w1, w1, w9
+    ror    w1, w1, 5
+
+    # w[2]=R((w[2]^k[3])+(w[3]^k[1]),3);
+    eor    w2, w2, w7
+    eor    w3, w3, w5
+    add    w2, w2, w3
+    ror    w2, w2, 3
+
+    # w[3]=t;
+    mov    w3, w10
+
+    # r++
+    add    w8, w8, 1
+    # r < 24
+    cmp    w8, 24
+    bne    L0
+
+    # save 128-bit ciphertext
+    stp    w0, w1, [x12]
+    stp    w2, w3, [x12, 8]
+
     add    sp, sp, 4*4
     ret
 	
