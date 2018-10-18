@@ -91,13 +91,12 @@ permute_loop:
     xor    x0, x4
     xor    x4, x3
     xor    x2, x1
-    ; t0  = x0;    t1  = x1;    t2  = x2;    t3  =  x3;    t4  = x4;
+    ; t0  = ~x0;   t1  = ~x1;   t2  = ~x2;   t3  = ~x3;    t4  = ~x4;
     mov    t0, x0
     mov    t1, x1
     mov    t2, x2
     mov    t3, x3
     mov    t4, x4
-    ; t0  = ~t0;   t1  = ~t1;   t2  = ~t2;   t3  = ~t3;    t4  = ~t4;
     not    t0
     not    t1
     not    t2
