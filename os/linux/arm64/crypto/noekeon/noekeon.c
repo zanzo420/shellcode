@@ -42,7 +42,7 @@ void noekeon(void*mk,void*p){
     t^=R(t,8)^R(t,24);a^=t;c^=t;
     if(rc==212)break;
     rc=((rc<<1)^((rc>>7)*27));
-    b=R(b,31);c=R(c,27);d=R(d,30);
+    b=(R(b,31);c=R(c,27);d=R(d,30);
     b^=~(d|c);t=d;d=a^(c&b);a=t;
     c^=a^b^d;b^=~(d|c);a^=c&b;
     b=R(b,1);c=R(c,5);d=R(d,2);
