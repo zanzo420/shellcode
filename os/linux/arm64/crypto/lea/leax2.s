@@ -51,10 +51,11 @@ lea128:
     movl   w3, 0xc6f98763
 	
 	# store on stack
-    str    w0, [sp]
-    str    w1, [sp, 4]
-    str    w2, [sp, 8]
+    str    w0, [sp    ]
+    str    w1, [sp,  4]
+    str    w2, [sp,  8]
     str    w3, [sp, 12]
+	
   # for(r=0;r<24;r++) {
     mov    w8, wzr
 	
