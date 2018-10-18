@@ -28,14 +28,13 @@
   POSSIBILITY OF SUCH DAMAGE. */
   
 # CHAM 128/128 in ARM64 assembly
-# 
+# 160 bytes 
 
-		.arch armv8-a
-		.text
+	.arch armv8-a
+	.text
+	.global cham
 		
-		.global cham
-		
-		# cham(void*mk,void*p);
+	# cham(void*mk,void*p);
 cham:
 	sub    sp, sp, 32
 	mov    w2, wzr
@@ -50,7 +49,7 @@ L0:
 	str    w7, [sp, x2, lsl 2]
 	
 	# rk[(i+4)^1]=t^R(k[i],21);
-	eor    w7, w5, w5, ror 21
+	eor    w7, w6, w5, ror 21
 	add    w5, w2, 4
 	eor    w5, w5, 1
 	str    w7, [sp, x5, lsl 2]
@@ -67,34 +66,36 @@ L0:
 	# i = 0
 	mov    w4, wzr
 L1:
-    # t=w[3],w[0]^=i,w[3]=rk[i&7],
+        tst    w4, 1
+
+        # t=w[3],w[0]^=i,w[3]=rk[i%8],
 	mov    w5, w3
 	eor    w0, w0, w4
 	and    w6, w4, 7
 	ldr    w3, [sp, x6, lsl 2]
 	
-	tst    w4, 1
-	
-    # w[3]^=R(w[1],(i & 1) ? 24:31),
+        # w[3]^=R(w[1],(i & 1) ? 24 : 31),
 	mov    w6, w1, ror 24
 	mov    w7, w1, ror 31
-	csel   w0, w6, w7, ne
-	eor    w3, w3, w0
+	csel   w6, w6, w7, ne
+	eor    w3, w3, w6
 	
 	# w[3]+=w[0],
 	add    w3, w3, w0
 	
-	# w[3]=R(w[3],(i&1)?31:24),
-	mov    w6, w3, ror 24
-	mov    w7, w3, ror 31
+	# w[3]=R(w[3],(i & 1) ? 31 : 24),
+	mov    w6, w3, ror 31
+	mov    w7, w3, ror 24
 	csel   w3, w6, w7, ne
 	
 	# w[0]=w[1],w[1]=w[2],w[2]=t;
 	mov    w0, w1
 	mov    w1, w2
 	mov    w2, w5
-	
+
+        # i++	
 	add    w4, w4, 1
+        # i < 80
 	cmp    w4, 80
 	bne    L1
 	
@@ -102,5 +103,3 @@ L1:
 	stp    w2, w3, [x8, 8]
 	add    sp, sp, 32
 	ret
-	
-	

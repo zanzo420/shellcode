@@ -1,5 +1,5 @@
 /**
-  Copyright (C) 2018 Odzhan. All Rights Reserved.
+  Copyright © 2017 Odzhan. All Rights Reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are
@@ -27,25 +27,22 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
-#define R(v,n)(((v)>>(n))|((v)<<(32-(n))))
-#define F(n)for(i=0;i<n;i++)
-typedef unsigned int W;
+#ifndef PRESENT_H
+#define PRESENT_H
+  
+#include "../include/macros.h"
 
-void cham(void*mk,void*p){
-  W rk[8],*w=p,*k=mk,i,t;
+#define PRESENT_RNDS 32
+  
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-  F(4)
-    t=k[i]^R(k[i],31),
-    rk[i]=t^R(k[i],24),
-    rk[(i+4)^1]=t^R(k[i],21);
-#include <stdio.h>
-printf("%08X %08X %08X %08X %08X %08X %08X %08X\n",
-	rk[0], rk[1], rk[2], rk[3], rk[4],
-	rk[5], rk[6], rk[7]);
-  F(80)
-    t=w[3],w[0]^=i,w[3]=rk[i&7],
-    w[3]^=R(w[1],(i&1)?24:31),
-    w[3]+=w[0],
-    w[3]=R(w[3],(i&1)?31:24),
-    w[0]=w[1],w[1]=w[2],w[2]=t;
+  void present(void*, void*);
+    
+#ifdef __cplusplus
 }
+#endif
+
+#endif
+

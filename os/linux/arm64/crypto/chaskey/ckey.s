@@ -50,15 +50,15 @@ chaskey:
     mov    w10, 16             // i = 16
 L0:
     add    w6, w6, w7          // x[0] += x[1];
-    eor    w7, w6, w7, ror 27  // x[1]=ROTR32(x[1],27) ^ x[0];
+    eor    w7, w6, w7, ror 27  // x[1]=R(x[1],27) ^ x[0];
     add    w8, w8, w9          // x[2] += x[3];
-    eor    w9, w8, w9, ror 24  // x[3]=ROTR32(x[3],24) ^ x[2];
+    eor    w9, w8, w9, ror 24  // x[3]=R(x[3],24) ^ x[2];
     add    w8, w8, w7          // x[2] += x[1];
     ror    w6, w6, 16
-    add    w6, w9, w6          // x[0]=ROTR32(x[0],16) + x[3];
-    eor    w9, w6, w9, ror 19  // x[3]=ROTR32(x[3],19) ^ x[0];
-    eor    w7, w8, w7, ror 25  // x[1]=ROTR32(x[1],25) ^ x[2];
-    ror    w8, w8, 16          // x[2]=ROTR32(x[2],16);
+    add    w6, w9, w6          // x[0]=R(x[0],16) + x[3];
+    eor    w9, w6, w9, ror 19  // x[3]=R(x[3],19) ^ x[0];
+    eor    w7, w8, w7, ror 25  // x[1]=R(x[1],25) ^ x[2];
+    ror    w8, w8, 16          // x[2]=R(x[2],16);
     subs   w10, w10, 1         // i--
     bne    L0                  // i > 0
   

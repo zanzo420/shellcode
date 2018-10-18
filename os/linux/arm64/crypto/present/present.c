@@ -1,5 +1,5 @@
 /**
-  Copyright (C) 2018 Odzhan. All Rights Reserved.
+  Copyright © 2017 Odzhan. All Rights Reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are
@@ -27,25 +27,40 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
-#define R(v,n)(((v)>>(n))|((v)<<(32-(n))))
-#define F(n)for(i=0;i<n;i++)
-typedef unsigned int W;
+#include "present.h"
 
-void cham(void*mk,void*p){
-  W rk[8],*w=p,*k=mk,i,t;
+#define R(v,n)(((v)>>(n))|((v)<<(64-(n))))
+#define F(a,b)for(a=0;a<b;a++)
 
-  F(4)
-    t=k[i]^R(k[i],31),
-    rk[i]=t^R(k[i],24),
-    rk[(i+4)^1]=t^R(k[i],21);
-#include <stdio.h>
-printf("%08X %08X %08X %08X %08X %08X %08X %08X\n",
-	rk[0], rk[1], rk[2], rk[3], rk[4],
-	rk[5], rk[6], rk[7]);
-  F(80)
-    t=w[3],w[0]^=i,w[3]=rk[i&7],
-    w[3]^=R(w[1],(i&1)?24:31),
-    w[3]+=w[0],
-    w[3]=R(w[3],(i&1)?31:24),
-    w[0]=w[1],w[1]=w[2],w[2]=t;
+typedef unsigned long long W;
+typedef unsigned char B;
+
+B S(B x) {
+  B s[16] =
+  {0xc,0x5,0x6,0xb,0x9,0x0,0xa,0xd,
+   0x3,0xe,0xf,0x8,0x4,0x7,0x1,0x2 };
+  return (s[(x&0xF0)>>4]<<4)|s[(x&0x0F)];
 }
+
+void present(void*mk,void*data) {
+    W   r,p,t,k0,k1,*k=(W*)mk,*x=(W*)data;
+    int i,j;
+    
+    k0=k[0];k1=k[1];p=x[0];
+    F(i,32-1) {
+      p^=k1;
+      F(j,8)((B*)&p)[j]=S(((B*)&p)[j]);
+      t=0;r=0x0030002000100000;
+      F(j,64)
+        t|=((p>>j)&1)<<(r&255),
+        r=R(r+1,16);
+      p=t;k0^=(i+i)+2;t=k1;
+      k1=(k1<<61)|(k0>>3);
+      k0=(k0<<61)|(t>>3);
+      k1=R(k1,56);
+      ((B*)&k1)[0]=S(((B*)&k1)[0]);
+      k1=R(k1,8);
+    }
+    x[0]=p^k1;
+}
+
