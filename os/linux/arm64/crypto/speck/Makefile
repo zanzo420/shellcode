@@ -1,6 +1,7 @@
 test:
-		as spk.s -ospk.o
-		gcc -Wall -O2 -Os test.c spk.o -otest	 	
+		as spk64.s -ospk64.o
+		as spk128.s -ospk128.o
+		gcc -Wall -O2 -Os test.c spk64.o spk128.o -otest	 	   
 
 clean:
-		rm -rf *.o test
+	rm *.o test
