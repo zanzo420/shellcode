@@ -1,5 +1,5 @@
 /**
-  Copyright (C) 2018 Odzhan. All Rights Reserved.
+  Copyright © 2017 Odzhan. All Rights Reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are
@@ -27,118 +27,107 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
-  .arm
-  .arch armv6  
-  .text
-  .align  2
-  
-  .global lea128_encryptx
-  
-k   .req r0
-x   .req r1
+# LEA-128/128 in ARM64 assembly
+# 224 bytes
 
-// key
-k0  .req r0
-k1  .req r2
-k2  .req r3
-k3  .req r4 
+    .arch armv8-a
 
-// data
-x0  .req r5
-x1  .req r6
-x2  .req r7
-x3  .req r8
+    .include "../../include.inc"
 
-// constants
-g0  .req r9
-g1  .req r10
-g2  .req r11
-g3  .req r12
- 
-// counter
-r   .req r1
- 
-lea128_encryptx:
-  // save registers
-  push   {r0-r12, lr}
-  
-  ldr    g0, =#0xc3efe9db     // g0 = 0xc3efe9db; 
-  ldr    g1, =#0x88c4d604     // g1 = 0x88c4d604; 
-  ldr    g2, =#0xe789f229     // g2 = 0xe789f229; 
-  ldr    g3, =#0xc6f98763     // g3 = 0xc6f98763; 
-  
-  // load 128-bit key
-  ldm    k, {k0, k1, k2, k3}  
+    .text
+    .global lea128
 
-  // load 128-bit plain text
-  push   {x}
-  ldm    x, {x0, x1, x2, x3}  
-  
-  // perform encryption  
-  mov    r, #24               // r = 24  
-lea_main:
-  push   {r}
+lea128:
+    mov    x11, x0
+    mov    x12, x1
 
-  // create subkey
-  // k0 = ROTR32(k0 + g0, 31);
-  add     k0, g0
-  ror     k0, #31
-  
-  // k1 = ROTR32(k1 + ROTR32(g0, 31), 29);
-  add     k1, g0, ror #31
-  ror     k1, #29
-  
-  // k2 = ROTR32(k2 + ROTR32(g0, 30), 26);
-  add     k2, g0, ror #30
-  ror     k2, #26
-  
-  // k3 = ROTR32(k3 + ROTR32(g0, 29), 21);
-  add     k3, g0, ror #29
-  ror     k3, #21
-  
-  // encrypt block  
-  // t0 = x0;
-  push   {x0}
-  
-  // x0 = ROTR32((x0 ^ k0) + (x1 ^ k1),23);
-  eor    r1, x1, k1
-  eor    x0, k0
-  add    x0, r1
-  ror    x0, #23
-  
-  // x1 = ROTR32((x1 ^ k2) + (x2 ^ k1), 5);
-  eor    r1, x2, k1
-  eor    x1, k2
-  add    x1, r1
-  ror    x1, #5
-  
-  // x2 = ROTR32((x2 ^ k3) + (x3 ^ k1), 3);
-  eor    r1, x3, k1
-  eor    x2, k3
-  add    x2, r1
-  ror    x2, #3
-  
-  // x3 = t0;
-  pop    {x3}
-  
-  // update constants
-  push   {g0}
-  mov    g0, g1
-  mov    g1, g2
-  mov    g2, g3
-  
-  // g3 = ROTR32(t0, 28);
-  pop    {g3}
-  ror    g3, #28
-  
-  pop    {r}
-  subs   r, #1             // r--
-  bne    lea_main          // r>0
-  
-  // save 128-bit cipher text
-  pop    {x}
-  stm    x, {x0, x1, x2, x3}
-  
-  // restore registers
-  pop    {r0-r12, pc}
-  
+    # allocate 16 bytes
+    sub    sp, sp, 4*4
+
+    # load immediate values
+    movl   w0, 0xc3efe9db
+    movl   w1, 0x88c4d604
+    movl   w2, 0xe789f229
+    movl   w3, 0xc6f98763
+
+    # store on stack
+    str    w0, [sp    ]
+    str    w1, [sp,  4]
+    str    w2, [sp,  8]
+    str    w3, [sp, 12]
+
+    # for(r=0;r<24;r++) {
+    mov    w8, wzr
+
+    # load 128-bit key
+    ldp    w4, w5, [x11]
+    ldp    w6, w7, [x11, 8]
+
+    # load 128-bit plaintext
+    ldp    w0, w1, [x12]
+    ldp    w2, w3, [x12, 8]
+L0:
+    # t=c[r%4];
+    and    w9, w8, 3 
+    ldr    w10, [sp, x9, lsl 2]
+	
+    # c[r%4]=R(t,28);
+    mov    w11, w10, ror 28
+    str    w11, [sp, x9, lsl 2]
+
+    # k[0]=R(k[0]+t,31);
+    add    w4, w4, w10
+    ror    w4, w4, 31
+
+    # k[1]=R(k[1]+R(t,31),29);
+    ror    w11, w10, 31
+    add    w5, w5, w11
+    ror    w5, w5, 29
+
+    # k[2]=R(k[2]+R(t,30),26);
+    ror    w11, w10, 30
+    add    w6, w6, w11
+    ror    w6, w6, 26
+
+    # k[3]=R(k[3]+R(t,29),21);
+    ror    w11, w10, 29
+    add    w7, w7, w11
+    ror    w7, w7, 21
+
+    # t=x[0];
+    mov    w10, w0
+
+    # w[0]=R((w[0]^k[0])+(w[1]^k[1]),23);
+    eor    w0, w0, w4
+    eor    w9, w1, w5
+    add    w0, w0, w9
+    ror    w0, w0, 23
+
+    # w[1]=R((w[1]^k[2])+(w[2]^k[1]),5);
+    eor    w1, w1, w6
+    eor    w9, w2, w5
+    add    w1, w1, w9
+    ror    w1, w1, 5
+
+    # w[2]=R((w[2]^k[3])+(w[3]^k[1]),3);
+    eor    w2, w2, w7
+    eor    w3, w3, w5
+    add    w2, w2, w3
+    ror    w2, w2, 3
+
+    # w[3]=t;
+    mov    w3, w10
+
+    # r++
+    add    w8, w8, 1
+    # r < 24
+    cmp    w8, 24
+    bne    L0
+
+    # save 128-bit ciphertext
+    stp    w0, w1, [x12]
+    stp    w2, w3, [x12, 8]
+
+    add    sp, sp, 4*4
+    ret
+	
