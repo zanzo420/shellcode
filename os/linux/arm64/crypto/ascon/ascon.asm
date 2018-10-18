@@ -15,124 +15,98 @@
 
 |ascon|	PROC
 
-; 6    :     int      i;
-; 7    :     W x0, x1, x2, x3, x4;
-; 8    :     W t0, t1, t2, t3, t4, *s=(W*)p;
-; 9    :     
-; 10   :     // load 320-bit state
-; 11   :     x0 = s[0]; x1 = s[1];
+; 6    :     int i;
+; 7    :     W   t0,t1,t2,t3,t4,x0,x1,x2,x3,x4,*s=(W*)p;
+; 8    :     
+; 9    :     // load 320-bit state
+; 10   :     x0=s[0];x1=s[1];x2=s[2];x3=s[3];x4=s[4];
 
-	ldp         x11,x5,[x0]
+	ldp         x12,x6,[x0]
+	mov         x4,#0
+	ldp         x15,x5,[x0,#0x10]
 	mov         x3,#0
-
-; 12   :     x2 = s[2]; x3 = s[3];
-
-	ldp         x12,x4,[x0,#0x10]
-	mov         x2,#0
-
-; 13   :     x4 = s[4];
-
 	ldr         x8,[x0,#0x20]
-	mov         w1,#0xC
+	mov         w2,#0xC
 |$LL8@ascon|
 
-; 14   : 
-; 15   :     for (i=0; i<12; i++) {
-; 16   :       // addition of round constant
-; 17   :       x2 ^= ((0xfull - i) << 4) | i;
-; 18   : 
-; 19   :       // substitution layer
-; 20   :       x0 ^= x4;    x4 ^= x3;    x2 ^= x1;
+; 11   :     // apply 12 rounds
+; 12   :     for(i=0;i<12;i++) {
+; 13   :       // add round constant
+; 14   :       x2^=((0xFULL-i)<<4)|i;
+; 15   :       // apply non-linear layer
+; 16   :       x0^=x4;x4^=x3;x2^=x1;
 
-	eor         x15,x8,x11
-	eor         x7,x8,x4
+	eor         x11,x8,x12
+	eor         x14,x8,x5
 	mov         x9,#0xF0
-	sub         x8,x9,x2
-	orr         x9,x8,x3
-	eor         x10,x9,x12
-	eor         x11,x10,x5
+	sub         x8,x9,x3
+	orr         x9,x8,x4
+	eor         x10,x9,x15
+	eor         x12,x10,x6
 
-; 21   :       t0  = x0;    t1  = x1;    t2  = x2;    t3  =  x3;    t4  = x4;
-; 22   :       t0  = ~t0;   t1  = ~t1;   t2  = ~t2;   t3  = ~t3;    t4  = ~t4;
+; 17   :       t4=(x0&~x4);t3=(x4&~x3);t2=(x3&~x2);t1=(x2&~x1);t0=(x1&~x0);
 
-	mvn         x8,x15
+	mvn         x8,x14
+	and         x15,x8,x11
+	mvn         x9,x12
+	and         x13,x9,x5
+	mvn         x8,x11
+	and         x10,x8,x6
+	mvn         x9,x6
+	and         x8,x9,x12
 
-; 23   :       t0 &= x1;    t1 &= x2;    t2 &= x3;    t3 &=  x4;    t4 &= x0;
+; 18   :       x0^=t1;x1^=t2;x2^=t3;x3^=t4;x4^=t0;
 
-	and         x13,x8,x5
-	mvn         x9,x11
-	and         x12,x9,x4
-	mvn         x8,x7
-	mvn         x9,x5
-	and         x14,x8,x15
-	and         x8,x9,x11
-
-; 24   :       x0 ^= t1;    x1 ^= t2;    x2 ^= t3;    x3 ^=  t4;    x4 ^= t0;
-
-	eor         x10,x8,x15
-	mvn         x9,x4
-	and         x8,x9,x7
 	eor         x11,x8,x11
+	mvn         x9,x5
+	and         x8,x9,x14
+	eor         x12,x8,x12
 
-; 25   :       x1 ^= x0;    x0 ^= x4;    x3 ^= x2;    x2  = ~x2;
+; 19   :       x1^=x0;x0^=x4;x3^=x2;x2=~x2;
 
-	eor         x8,x12,x5
-	eor         x6,x13,x7
-	eor         x13,x8,x10
-	eor         x8,x14,x4
-	eor         x10,x6,x10
-	eor         x15,x8,x11
+	eor         x8,x13,x6
+	eor         x7,x10,x14
+	eor         x14,x8,x11
+	eor         x8,x15,x5
+	eor         x10,x7,x11
+	eor         x13,x8,x12
 
-; 26   : 
-; 27   :       // linear diffusion layer
-; 28   :       x0 ^= R(x0, 19) ^ R(x0, 28);
+; 20   :       // apply linear diffusion layer
+; 21   :       x0^=R(x0,19)^R(x0,28);x1^=R(x1,61)^R(x1,39);
 
 	ror         x8,x10,#0x13
 	eor         x9,x8,x10,ror #0x1C
-	mvn         x12,x11
+	mvn         x11,x12
+	ror         x8,x14,#0x3D
+	eor         x12,x9,x10
+	eor         x9,x8,x14,ror #0x27
 
-; 29   :       x1 ^= R(x1, 61) ^ R(x1, 39);
+; 22   :       x2^=R(x2,1)^R(x2,6);x3^=R(x3,10)^R(x3,17);
 
-	ror         x8,x13,#0x3D
-	eor         x11,x9,x10
-	eor         x9,x8,x13,ror #0x27
+	ror         x8,x11,#1
+	eor         x6,x9,x14
+	eor         x9,x8,x11,ror #6
+	ror         x8,x13,#0xA
+	eor         x15,x9,x11
+	eor         x9,x8,x13,ror #0x11
 
-; 30   :       x2 ^= R(x2,  1) ^ R(x2,  6);
+; 23   :       x4^=R(x4,7)^R(x4,41);
 
-	ror         x8,x12,#1
+	ror         x8,x7,#7
 	eor         x5,x9,x13
-	eor         x9,x8,x12,ror #6
+	eor         x9,x8,x7,ror #0x29
+	add         x4,x4,#1
+	eor         x8,x9,x7
+	add         x3,x3,#0x10
+	sub         w2,w2,#1
+	cbnz        w2,|$LL8@ascon|
 
-; 31   :       x3 ^= R(x3, 10) ^ R(x3, 17);
+; 24   :     }
+; 25   :     // save 320-bit state
+; 26   :     s[0]=x0;s[1]=x1;s[2]=x2;s[3]=x3;s[4]=x4;
 
-	ror         x8,x15,#0xA
-	eor         x12,x9,x12
-	eor         x9,x8,x15,ror #0x11
-
-; 32   :       x4 ^= R(x4,  7) ^ R(x4, 41);
-
-	ror         x8,x6,#7
-	eor         x4,x9,x15
-	eor         x9,x8,x6,ror #0x29
-	add         x3,x3,#1
-	eor         x8,x9,x6
-	add         x2,x2,#0x10
-	sub         w1,w1,#1
-	cbnz        w1,|$LL8@ascon|
-
-; 33   : 
-; 34   :     }
-; 35   :     // save 320-bit state
-; 36   :     s[0] = x0; s[1] = x1;
-
-	stp         x11,x5,[x0]
-
-; 37   :     s[2] = x2; s[3] = x3;
-
-	stp         x12,x4,[x0,#0x10]
-
-; 38   :     s[4] = x4;
-
+	stp         x12,x6,[x0]
+	stp         x15,x5,[x0,#0x10]
 	str         x8,[x0,#0x20]
 	ret
 
