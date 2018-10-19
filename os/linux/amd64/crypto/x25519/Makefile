@@ -11,7 +11,7 @@ test:
 	nasm -felf64 expmod.asm -oexpmod.o
 	nasm -felf64 cswap.asm -ocswap.o
 	nasm -felf64 modulo.asm -omodulo.o
-	gcc -Os -Wall test.c addmod.o submod.o mulmod.o expmod.o cswap.o modulo.o -otest
+	gcc -Os -Wall test.c addmod.o submod.o mulmod.o expmod.o cswap.o modulo.o x25519.c curve64.c -otest
 
 clean:
 	rm *.o test

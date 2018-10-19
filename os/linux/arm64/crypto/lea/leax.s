@@ -32,6 +32,7 @@
 
     .arch armv8-a
 
+    # include the MOVL macro
     .include "../../include.inc"
 
     .text

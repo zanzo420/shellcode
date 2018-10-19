@@ -1,74 +1,71 @@
-;
-;  Copyright © 2018 Odzhan. All Rights Reserved.
-;
-;  Redistribution and use in source and binary forms, with or without
-;  modification, are permitted provided that the following conditions are
-;  met:
-;
-;  1. Redistributions of source code must retain the above copyright
-;  notice, this list of conditions and the following disclaimer.
-;
-;  2. Redistributions in binary form must reproduce the above copyright
-;  notice, this list of conditions and the following disclaimer in the
-;  documentation and/or other materials provided with the distribution.
-;
-;  3. The name of the author may not be used to endorse or promote products
-;  derived from this software without specific prior written permission.
-;
-;  THIS SOFTWARE IS PROVIDED BY AUTHORS "AS IS" AND ANY EXPRESS OR
-;  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-;  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-;  DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
-;  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-;  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-;  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-;  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-;  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-;  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-;  POSSIBILITY OF SUCH DAMAGE.
-;
-; -----------------------------------------------
-; Subtraction of 256-bit integers modulo 2^256-38
-;
-; size: 54 bytes
-;
-; -----------------------------------------------
-                bits   64
-
-                %ifndef BIN
-                  global submod
-                %endif
+#
+#  Copyright © 2018 Odzhan. All Rights Reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are
+#  met:
+#
+#  1. Redistributions of source code must retain the above copyright
+#  notice, this list of conditions and the following disclaimer.
+#
+#  2. Redistributions in binary form must reproduce the above copyright
+#  notice, this list of conditions and the following disclaimer in the
+#  documentation and/or other materials provided with the distribution.
+#
+#  3. The name of the author may not be used to endorse or promote products
+#  derived from this software without specific prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY AUTHORS "AS IS" AND ANY EXPRESS OR
+#  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#  DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+#  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+#  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+#  SERVICES# LOSS OF USE, DATA, OR PROFITS# OR BUSINESS INTERRUPTION)
+#  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+#  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+#  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+#
+# -----------------------------------------------
+# Subtraction of 256-bit integers modulo 2^256-38
+#
+# size: 54 bytes
+#
+# -----------------------------------------------
+                .arch armv8-a
+                .text
+                
+                .global submod
                 
                 ; void submod(void *r, void *a, void *b);
-                
-                %include "macro.inc"
 submod:
-                pushx  rax, rcx, rdx, rsi, rdi
+                # load a
+                ldp    x3, x4, [x1] 
+                ldp    x5, x6, [x1, 16]
                 
-                xor    ecx, ecx        ; ecx = 0, CF = 0 
-                mov    cl, 8           ; subtract 8 integers
-                push   rdi
-sm_l1:
-                lodsd                  ; eax = a[i]
-                sbb    eax, [rdx]      ; eax -= b[i] - CF
-                stosd                  ; r[i] = eax 
-                lea    rdx, [rdx+4]    ; advance b by 4
-                loop   sm_l1
-                pop    rdi
-
-                ; reduction step
-                push   38
-                pop    rax             ; rax = 38
+                # load b
+                ldp    x7, x8, [x2]
+                ldp    x9, x10, [x2, 16]
                 
-                cmovnc eax, ecx        ; zero rax if CF==0
-                sub    [rdi   ], rax   ; r[0] -= 38 * CF
-                sbb    [rdi+ 8], rcx   ; r[1] -= CF
-                sbb    [rdi+16], rcx   ; r[2] -= CF
-                sbb    [rdi+24], rcx   ; r[3] -= CF
+                # perform subtraction
+                subs   x3, x3, x7
+                sbcs   x4, x4, x8
+                sbcs   x5, x5, x9
+                sbcs   x6, x6, x10
                 
-                cmovnc eax, ecx        ; zero rax if CF==0
-                sub    [rdi], rax      ; r[0] -= 38 * CF
-
-                popx   rax, rcx, rdx, rsi, rdi
+                # apply reduction
+                mov    x7, 38
+                csel   x8, x7, xzr, mi
+                
+                subs   x3, x3, x8
+                sbcs   x4, x4, xzr
+                sbcs   x5, x5, xzr
+                sbcs   x6, x6, xzr
+                
+                csel   x8, x7, xzr, mi
+                sub    x3, x3, x8
+                
+                str    x3, x4, [x0]
+                str    x5, x6, [x0, 16]
                 ret
-                

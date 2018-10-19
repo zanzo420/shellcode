@@ -38,9 +38,19 @@ typedef union _w256_t {
 	u64 q[4];
 } w256_t;
 
+typedef struct _curve_t {
+  char         *str;
+  scalarmult_t curve;
+} curve_t;
+
 typedef u64 gf[4];
+typedef void (*scalarmult_t)(void*,void*,void*);
 
 void bin2hex(const char *s, uint8_t x[], int len);
+
+void curve25519_donna(void*r, void*k, void*m);
+void scalarmult_c(void*r, void*k, void*m);
+void scalarmult_amd64(void*r, void*k, void*m);
 
 void modulo(void *x);
 void expmod(void *x);
@@ -49,8 +59,8 @@ void submod(void *r, void *a, void *b);
 void addmod(void *r, void *a, void *b);
 void cswap(int, void *a, void *b);
 
-// scalar multiplication on Montgomery curve
-void scalarmult(void *r, void *k_in, void *m) {
+// scalar multiplication on Montgomery curve using AMD64 assembly
+void scalarmult_amd64(void *r, void *k_in, void *m) {
       u8 k[32];
       gf v[8];
 
@@ -134,20 +144,10 @@ void scalarmult(void *r, void *k_in, void *m) {
       #undef g
 }
 
-#ifndef ASM
-
-#if defined(_WIN32) || defined(_WIN64)
-#define WINDOWS
-#include <windows.h>
-#include <wincrypt.h>
-#pragma comment(lib, "advapi32")
-#else
-#define NIX
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#endif
 
 void bin2hex(const char *s, uint8_t x[], int len) {
     int i;
@@ -158,8 +158,6 @@ void bin2hex(const char *s, uint8_t x[], int len) {
     }
     putchar('\n');
 }
-
-#if defined(NIX)
 
 int random(void *out, size_t outlen)
 {
@@ -179,24 +177,6 @@ int random(void *out, size_t outlen)
     }
     return u==outlen;
 }
-
-#else
-
-int random(void *out, size_t outlen)
-{
-    HCRYPTPROV hp;
-    BOOL       r=FALSE;
-
-    if (CryptAcquireContext(&hp, 0, 0, PROV_RSA_FULL,
-      CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
-    {
-      r = CryptGenRandom(hp, outlen, out);
-      CryptReleaseContext(hp, 0);
-    }
-    return r;
-}
-
-#endif
 
 size_t hex2bin (void *bin, char hex[]) {
     size_t len, i;
@@ -239,7 +219,7 @@ char b_pk[]="de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f";
 // Their shared secret, K:
 char ab_key[]="4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742";
 
-void test_rfc(void) {
+void test_rfc(scalarmult_t scalarmult) {
     int equ;
     u8  sk1[32], sk2[32], pk1[32], pk2[32], k1[32], k2[32], key[32];
     u8  base[32] = {9};
@@ -278,7 +258,7 @@ void test_rfc(void) {
     bin2hex("RFC shared secret", k1, 32);
 }
 
-void test_ecdh(void) {
+void test_ecdh(scalarmult_t scalarmult) {
     u8  sk1[32], pk1[32], k1[32]; // keys for Doris
     u8  sk2[32], pk2[32], k2[32]; // keys for Boris
     u8  base[32] = {9};
@@ -314,9 +294,18 @@ void test_ecdh(void) {
 
 int main(void)
 {
-    test_ecdh();
-    test_rfc();
+    int i;
+    
+    curve_t c[3]={
+      {"AMD64 Assembly", scalarmult_amd64}, 
+      {"64-bit C",       curve25519_donna},
+      {"16-bit C",       scalarmult_c}};
+    
+    for (i=0; i<3; i++) {
+      printf("Testing %s\n", c[i].str);
+      
+      test_ecdh(c[i].curve);
+      test_rfc(c[i].curve);
+    }
     return 0;
 }
-
-#endif
