@@ -38,116 +38,24 @@ typedef union _w256_t {
 	u64 q[4];
 } w256_t;
 
+typedef void (*scalarmult_t)(void*,void*,void*);
+
+typedef struct _curve_t {
+  char         *str;
+  scalarmult_t curve;
+} curve_t;
+
 typedef u64 gf[4];
 
 void bin2hex(const char *s, uint8_t x[], int len);
 
-void modulo(void *x);
-void expmod(void *x);
-void mulmod(void *r, void *a, void *b);
-void submod(void *r, void *a, void *b);
-void addmod(void *r, void *a, void *b);
-void cswap(int, void *a, void *b);
+void curve25519_donna(void*r, void*k, void*m);
+void scalarmult_c(void*r, void*k, void*m);
 
-// scalar multiplication on Montgomery curve
-void scalarmult(void *r, void *k_in, void *m) {
-      u8 k[32];
-      gf v[8];
-
-      #define x  v[0]
-      #define a  v[1]
-      #define b  v[2]
-      #define c  v[3]
-      #define d  v[4]
-      #define e  v[5]
-      #define f  v[6]
-      #define g  v[7]
-
-      int   i, p, bit, prev=0;
-
-      memset(v, 0, sizeof(v));
-      memcpy(k, k_in, 32);
-
-      // clamp
-      k[ 0] &= 248;
-      k[31] &= 127;
-      k[31] |= 64;
-
-      // main loop
-      memcpy(x, m, 32);
-
-      ((u8*)x)[31] &= 127;
-
-      memcpy(b, x, 32);
-
-      // g = 121665
-      g[0] = 121665;
-
-      // a =1; d = 1;
-      a[0] = d[0] = 1;
-
-      for (i=254; i>=0; --i) {
-          bit = (k[i >> 3] >> (i & 7)) & 1;  // bit set?
-
-          p = bit ^ prev;
-          prev = bit;
-
-          cswap(p, a, b);
-          cswap(p, c, d);
-
-          addmod(e, a, c);  // e = a + c
-          submod(a, a, c);  // a = a - c
-
-          addmod(c, b, d);  // c = b + d
-          submod(b, b, d);  // b = b - d
-
-          mulmod(d, e, e);  // d = e * e
-          mulmod(f, a, a);  // f = a * a
-          mulmod(a, c, a);  // a = c * a
-          mulmod(c, b, e);  // c = b * e
-
-          addmod(e, a, c);  // e = a + c
-          submod(a, a, c);  // a = a - c
-
-          mulmod(b, a, a);  // b = a * a
-          submod(c, d, f);  // c = d - f
-
-          mulmod(a, c, g);  // a = c * g
-          addmod(a, a, d);  // a = a + d
-
-          mulmod(c, c, a);  // c = c * a
-          mulmod(a, d, f);  // a = d * f
-          mulmod(d, b, x);  // d = b * x
-          mulmod(b, e, e);  // b = e * e
-      }
-      expmod(c);
-      mulmod(r, a, c);
-      modulo(r);
-
-      #undef x
-      #undef a
-      #undef b
-      #undef c
-      #undef d
-      #undef e
-      #undef f
-      #undef g
-}
-
-#ifndef ASM
-
-#if defined(_WIN32) || defined(_WIN64)
-#define WINDOWS
-#include <windows.h>
-#include <wincrypt.h>
-#pragma comment(lib, "advapi32")
-#else
-#define NIX
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#endif
 
 void bin2hex(const char *s, uint8_t x[], int len) {
     int i;
@@ -158,8 +66,6 @@ void bin2hex(const char *s, uint8_t x[], int len) {
     }
     putchar('\n');
 }
-
-#if defined(NIX)
 
 int random(void *out, size_t outlen)
 {
@@ -179,24 +85,6 @@ int random(void *out, size_t outlen)
     }
     return u==outlen;
 }
-
-#else
-
-int random(void *out, size_t outlen)
-{
-    HCRYPTPROV hp;
-    BOOL       r=FALSE;
-
-    if (CryptAcquireContext(&hp, 0, 0, PROV_RSA_FULL,
-      CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
-    {
-      r = CryptGenRandom(hp, outlen, out);
-      CryptReleaseContext(hp, 0);
-    }
-    return r;
-}
-
-#endif
 
 size_t hex2bin (void *bin, char hex[]) {
     size_t len, i;
@@ -239,7 +127,7 @@ char b_pk[]="de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f";
 // Their shared secret, K:
 char ab_key[]="4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742";
 
-void test_rfc(void) {
+void test_rfc(scalarmult_t scalarmult) {
     int equ;
     u8  sk1[32], sk2[32], pk1[32], pk2[32], k1[32], k2[32], key[32];
     u8  base[32] = {9};
@@ -278,7 +166,7 @@ void test_rfc(void) {
     bin2hex("RFC shared secret", k1, 32);
 }
 
-void test_ecdh(void) {
+void test_ecdh(scalarmult_t scalarmult) {
     u8  sk1[32], pk1[32], k1[32]; // keys for Doris
     u8  sk2[32], pk2[32], k2[32]; // keys for Boris
     u8  base[32] = {9};
@@ -314,9 +202,17 @@ void test_ecdh(void) {
 
 int main(void)
 {
-    test_ecdh();
-    test_rfc();
+    int i;
+    
+    curve_t c[2]={
+      {"64-bit C",       curve25519_donna},
+      {"16-bit C",       scalarmult_c}};
+    
+    for (i=0; i<sizeof(c)/sizeof(curve_t); i++) {
+      printf("Testing %s\n", c[i].str);
+      
+      test_ecdh(c[i].curve);
+      test_rfc(c[i].curve);
+    }
     return 0;
 }
-
-#endif

@@ -36,6 +36,16 @@
 
 _start:
     // execve("/bin/sh", NULL, NULL);
+    eor    x0, x0, x0
+    eon    x1, x1, x1
+    orn    x2, x2, x2
+    sub    x3, x3, x3
+    cmp    x3, 1
+    mrs    x4, nzcv
+    sbc    x3, x3, x3
+    add    x3, x3, 2
+    mrs    x5, nzcv
+
     sub    x0, sp, 16        // subtract 16 bytes for string
     mov    x8, SYS_execve
     mov    x2, xzr           // NULL
