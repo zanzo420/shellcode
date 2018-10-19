@@ -38,13 +38,14 @@ typedef union _w256_t {
 	u64 q[4];
 } w256_t;
 
+typedef void (*scalarmult_t)(void*,void*,void*);
+
 typedef struct _curve_t {
   char         *str;
   scalarmult_t curve;
 } curve_t;
 
 typedef u64 gf[4];
-typedef void (*scalarmult_t)(void*,void*,void*);
 
 void bin2hex(const char *s, uint8_t x[], int len);
 
