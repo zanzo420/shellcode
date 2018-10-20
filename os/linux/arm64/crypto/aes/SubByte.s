@@ -11,20 +11,25 @@
     #define k   x1    // pointer to round key
     #define x   sp    // local buffer
     
-    #define i   w2    // used in the main function for loops
-    #define j   w3    // used in sub routines for loops
+    #define i   x2    // used in the main function for loops
+    #define iw  w2
+
+    #define j   x3    // used in sub routines for loops
     
     // temporary variables
-    #define o   x4    // original LR
-    #define p   w5
-    #define q   w6
-    #define r   x7    // subroutine LR
-    #define t   w8
-    #define u   w9
-    #define v  w10
-    #define w  w11
-    #define y  w12
-    #define z  w13
+    #define c   w4
+    #define n   x5
+    #define o   x6    // original LR
+    #define p   w7 
+    #define q   w8
+    #define r   x9   // subroutine LR
+    #define t  w10 
+    #define tx x10
+    #define u  w11
+    #define v  w12
+    #define w  w13
+    #define y  w14
+    #define z  w15
 
 M:
     // t = y & 0x80808080
@@ -61,25 +66,25 @@ SB1:
     bne      SB0                 // for (z=u=0,y=1;--u; y ^= M(y))
 
     // z=y; F(4) z ^= y = (y<<1)|(y>>7);
-    mov      z, y              // z = y
+    mov      p, y              // z = y
     mov      j, 4              // j = 4
 SB2:
     lsr      t, y, 7
     orr      y, t, y, lsl 1
-    eor      z, z, y 
+    eor      p, p, y 
     subs     j, j, 1
     bne      SB2
 SB3:
     // return x ^ 99
     mov      t, 99
-    eor      z, z, t 
-    bfxil    w, z, 0, 8 
+    eor      p, p, t 
+    bfxil    w, p, 0, 8 
     ret      r
 
 E:
     mov      o, lr
-    sub      x, sp, 32          # x = new W[8]
-    add      k, x, 16           # k = &x[4]
+    sub      x, sp, 32          // x = new W[8]
+    add      k, x, 16           // k = &x[4]
 
     mov      c, 1
     
@@ -88,12 +93,12 @@ E:
     stp      x5, x6, [x]
     stp      x7, x8, [x, 16]
 L0:
-    # AddRoundKey, 1st part of ExpandRoundKey
-    # w=k[3];F(4)w=(w&-256)|S(w),w=R(w,8),((W*)s)[i]=x[i]^k[i];
+    // AddRoundKey, 1st part of ExpandRoundKey
+    // w=k[3];F(4)w=(w&-256)|S(w),w=R(w,8),((W*)s)[i]=x[i]^k[i];
     mov      i, 0
     ldr      w, [k, 3*4]
 L1:
-    bl       S 
+    bl       SubByte 
     ror      w, w, 8
     ldr      t, [x, i, lsl 2]
     ldr      u, [k, i, lsl 2]
@@ -103,8 +108,8 @@ L1:
     cmp      i, 4
     bne      L1
 
-    # AddRoundConstant, perform 2nd part of ExpandRoundKey
-    # w=R(w,8)^c;F(4)w=k[i]^=w;
+    // AddRoundConstant, perform 2nd part of ExpandRoundKey
+    // w=R(w,8)^c;F(4)w=k[i]^=w;
     eor      w, c, w, ror 8
     mov      i, 0
 L2:
@@ -114,51 +119,52 @@ L2:
     add      i, i, 1
     bne      L2
     
-    # if round 11, stop
-    # if(c==108)break;
+    // if round 11, stop
+    // if(c==108)break;
     cmp      c, 108
     beq      L5
 
-    # update round constant
-    # c=M(c);
+    // update round constant
+    // c=M(c);
     mov      y, c
     bl       M
     mov      c, t
     
-    # SubBytes and ShiftRows
-    # F(16)((B*)x)[(i%4)+(((i/4)-(i%4))%4)*4]=S(s[i]);
+    // SubBytes and ShiftRows
+    // F(16)((B*)x)[(i%4)+(((i/4)-(i%4))%4)*4]=S(s[i]);
     mov      i, 0
 L3:
-    ldrb     w, [s, i]          # w = s[i]
-    bl       S                  # w = S(w & 0xFF)
-    and      t, i, 3            # t = i % 4
-    lsr      u, i, 2            # u = i / 4
-    sub      u, u, t            # u = u - t
-    and      u, u, 3            # u %= 4
-    add      t, t, u, lsl 2     # t += u * 4
-    strb     w, [x, t uxtw 0]   # x[i] = w & 0xFF
-    add      i, i, 1            # i++
-    cmp      i, 16              # i < 16
+    ldrb     w, [s, i]          // w = s[i]
+    bl       SubByte                  // w = S(w & 0xFF)
+    and      t, iw, 3            // t = i % 4
+    lsr      u, iw, 2            // u = i / 4
+    sub      u, u, t            // u = u - t
+    and      u, u, 3            // u %= 4
+    add      t, t, u, lsl 2     // t += u * 4
+    uxtb     t, t
+    strb     w, [x, tx]   // x[i] = w & 0xFF
+    add      i, i, 1            // i++
+    cmp      i, 16              // i < 16
     bne      L3 
 
-    # if (c != 108)
+    // if (c != 108)
     cmp      c, 108
     beq      L0
 
-    # MixColumns
-    # F(4)w=x[i],x[i]=R(w,8)^R(w,16)^R(w,24)^M(R(w,8)^w);
+    // MixColumns
+    // F(4)w=x[i],x[i]=R(w,8)^R(w,16)^R(w,24)^M(R(w,8)^w);
     mov      i, 0    
 L4:
-    ldr      w, [x, i, lsl 2]   # w  = x[i]
-    ror      y, w, 8            # y = R(w, 8)
-    eor      y, y, w            # y ^= w 
-    bl       M                  # y = M(w0)
-    eor      y, y, w, ror 8     # y ^= R(w, 8)
-    eor      y, y, w, ror 16    # y ^= R(w, 16)
-    eor      y, y, w, ror 24    # y ^= R(w, 24)
-    str      y, [x, i, lsl 2]   # x[i] = y
-    add      i, i, 1            # i++
-    cmp      i, 4               # i < 4
+    ldr      w, [x, i, lsl 2]   // w  = x[i]
+    ror      y, w, 8            // y = R(w, 8)
+    eor      y, y, w            // y ^= w 
+    bl       M                  // y = M(w0)
+    eor      y, y, w, ror 8     // y ^= R(w, 8)
+    eor      y, y, w, ror 16    // y ^= R(w, 16)
+    eor      y, y, w, ror 24    // y ^= R(w, 24)
+    str      y, [x, i, lsl 2]   // x[i] = y
+    add      i, i, 1            // i++
+    cmp      i, 4               // i < 4
     bne      L4
     b        L0
 L5:

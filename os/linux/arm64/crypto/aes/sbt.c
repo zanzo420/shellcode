@@ -40,6 +40,7 @@ void bin2hex(char *s, void *p, int len) {
     int i;
     printf("%-10s : ", s);
     for (i=0; i<len; i++) {
+      if ((i & 15)==0) putchar('\n');
       printf ("%02x ", ((uint8_t*)p)[i]);
     }
     printf("\n");
@@ -73,7 +74,7 @@ int test_sbox(void) {
     
     equ = memcmp(s, sbox, 256)==0;
     printf("\nsbox test %s\n", equ ? "OK" : "FAILED"); 
-    
+    bin2hex("sbox", s, 256); 
     return equ;
 }
 
