@@ -45,7 +45,7 @@ M:
  
     // B SubByte(B x);
 SubByte:
-    mov      r, lr
+    str      lr, [sp, -16]!
     uxtb     p, w
     cbz      p, SB3
 
@@ -79,10 +79,11 @@ SB3:
     mov      t, 99
     eor      p, p, t 
     bfxil    w, p, 0, 8 
-    ret      r
+    ldr      lr, [sp], 16
+    ret
 
 E:
-    mov      o, lr
+    str      lr, [sp, -16]!
     sub      x, sp, 32          // x = new W[8]
     add      k, x, 16           // k = &x[4]
 
@@ -91,7 +92,7 @@ E:
     ldp      x5, x6, [s]
     ldp      x7, x8, [s, 16]
     stp      x5, x6, [x]
-    stp      x7, x8, [x, 16]
+    stp      x7, x8, [k]
 L0:
     // AddRoundKey, 1st part of ExpandRoundKey
     // w=k[3];F(4)w=(w&-256)|S(w),w=R(w,8),((W*)s)[i]=x[i]^k[i];
@@ -111,12 +112,13 @@ L1:
     // AddRoundConstant, perform 2nd part of ExpandRoundKey
     // w=R(w,8)^c;F(4)w=k[i]^=w;
     eor      w, c, w, ror 8
-    mov      i, 0
+    mov      i, xzr 
 L2:
     ldr      t, [k, i, lsl 2]
     eor      w, w, t
     str      w, [k, i, lsl 2]
     add      i, i, 1
+    cmp      i, 4
     bne      L2
     
     // if round 11, stop
@@ -132,7 +134,7 @@ L2:
     
     // SubBytes and ShiftRows
     // F(16)((B*)x)[(i%4)+(((i/4)-(i%4))%4)*4]=S(s[i]);
-    mov      i, 0
+    mov      i, xzr 
 L3:
     ldrb     w, [s, i]          // w = s[i]
     bl       SubByte                  // w = S(w & 0xFF)
@@ -153,13 +155,13 @@ L3:
 
     // MixColumns
     // F(4)w=x[i],x[i]=R(w,8)^R(w,16)^R(w,24)^M(R(w,8)^w);
-    mov      i, 0    
+    mov      i, xzr 
 L4:
     ldr      w, [x, i, lsl 2]   // w  = x[i]
     ror      y, w, 8            // y = R(w, 8)
     eor      y, y, w            // y ^= w 
-    bl       M                  // y = M(w0)
-    eor      y, y, w, ror 8     // y ^= R(w, 8)
+    bl       M                  // y = M(y)
+    eor      y, t, w, ror 8     // y ^= R(w, 8)
     eor      y, y, w, ror 16    // y ^= R(w, 16)
     eor      y, y, w, ror 24    // y ^= R(w, 24)
     str      y, [x, i, lsl 2]   // x[i] = y
@@ -169,5 +171,6 @@ L4:
     b        L0
 L5:
     add      sp, sp, 32
-    ret      o
+    ldr      lr, [sp], 16 
+    ret
 

@@ -29,7 +29,7 @@ M:
 
 
 SubByte:
-    mov x9, lr
+    str lr, [sp, -16]!
     uxtb w7, w13
     cbz w7, SB3
 
@@ -63,10 +63,11 @@ SB3:
     mov w10, 99
     eor w7, w7, w10
     bfxil w13, w7, 0, 8
-    ret x9
+    ldr lr, [sp], 16
+    ret
 
 E:
-    mov x6, lr
+    str lr, [sp, -16]!
     sub sp, sp, 32
     add x1, sp, 16
 
@@ -75,7 +76,7 @@ E:
     ldp x5, x6, [x0]
     ldp x7, x8, [x0, 16]
     stp x5, x6, [sp]
-    stp x7, x8, [sp, 16]
+    stp x7, x8, [x1]
 L0:
 
 
@@ -95,12 +96,13 @@ L1:
 
 
     eor w13, w4, w13, ror 8
-    mov x2, 0
+    mov x2, xzr
 L2:
     ldr w10, [x1, x2, lsl 2]
     eor w13, w13, w10
     str w13, [x1, x2, lsl 2]
     add x2, x2, 1
+    cmp x2, 4
     bne L2
 
 
@@ -116,7 +118,7 @@ L2:
 
 
 
-    mov x2, 0
+    mov x2, xzr
 L3:
     ldrb w13, [x0, x2]
     bl SubByte
@@ -137,13 +139,13 @@ L3:
 
 
 
-    mov x2, 0
+    mov x2, xzr
 L4:
     ldr w13, [sp, x2, lsl 2]
     ror w14, w13, 8
     eor w14, w14, w13
     bl M
-    eor w14, w14, w13, ror 8
+    eor w14, w10, w13, ror 8
     eor w14, w14, w13, ror 16
     eor w14, w14, w13, ror 24
     str w14, [sp, x2, lsl 2]
@@ -153,4 +155,5 @@ L4:
     b L0
 L5:
     add sp, sp, 32
-    ret x6
+    ldr lr, [sp], 16
+    ret
