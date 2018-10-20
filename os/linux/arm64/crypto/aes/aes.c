@@ -37,14 +37,14 @@ W M(W x){
     return((x^t)*2)^((t>>7)*27);
 }
 // SubByte
-B S(B x) {
-    B i,y,c;
+B S(B w) {
+    B j,y,z;
     
-    if(x) {
-      for(c=i=0,y=1;--i;y=(!c&&y==x)?c=1:y,y^=M(y));
-      x=y;F(4)x^=y=(y<<1)|(y>>7);
+    if(w) {
+      for(z=j=0,y=1;--j;y=(!z&&y==w)?z=1:y,y^=M(y));
+      z=y;F(4)z^=y=(y<<1)|(y>>7);
     }
-    return x^99;
+    return z^99;
 }
 void E(B *s) {
     W i,w,x[8],c=1,*k=(W*)&x[4];
